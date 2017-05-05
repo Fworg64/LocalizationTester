@@ -16,17 +16,24 @@ Eigen::Matrix4d getRelativeTransform(double tag_size,double tag_p[][2], double f
 
 int main(int argc, char** argv)
 {
-	double tagsize;
+	int tag1id;
+	double tag1size;
+	int tag2id;
+	double tag2size;
 	int delay;
-	if (argc != 3)
+	if (argc != 6)
 	{
-		std::cout <<"Help:: please supply the tag size measured from edge of black border to edge of black border and arguement for waitkey in ms like this: "<<std::endl<<"main .18 30"<<std::endl;
+		std::cout <<"Help:: please supply the origin tag id then size measured from edge of black border to edge of black border "<<std::endl<<
+					"then reference tag id and size, then the arguement for waitkey in ms like this: "<<std::endl<<"main 4 .121 1 .086 30"<<std::endl;
 		return -1;
 	}
 	else
 	{
-		tagsize = atof(argv[1]);
-		delay = atoi(argv[2]);
+		tag1id = atoi(argv[1]);
+		tag1size = atof(argv[2]);
+		tag2id = atoi(argv[3]);
+		tag2size = atof(argv[4]);
+		delay = atoi(argv[5]);
 	}
 
     VideoCapture cap(0);
@@ -82,6 +89,13 @@ int main(int argc, char** argv)
 	double dt=0;
 	unsigned int counter=0;
 
+	double originx=0;
+	double originy=0;
+	double originz=0;
+	double myx =0;
+	double myy=0;
+	double myz=0;
+
 	std::ofstream outfile;
 	outfile.open("outfile.csv");
 
@@ -112,20 +126,39 @@ int main(int argc, char** argv)
         	apriltag_detection_t *det;
         	zarray_get(detections, i, &det); //store dection at adress pointed by det
 
-			//if (det->id == 0) //populate position of player from tag id
+			if (det->id == tag1id) //populate position of player from tag id
 			{
 				std::cout << "found tag "<<det->id<<" with error: " << det->hamming <<std::endl;
-				std::cout << "reading tag pos as x: "<< det->c[0] <<" y: "<<det->c[1] <<std::endl;
+				std::cout << "reading tag img coords as x: "<< det->c[0] <<" y: "<<det->c[1] <<std::endl;
 				//"tag size is size between the outer black edges" -Ed
 				//"I'll bet its in meters..." -Austin
-				myT = getRelativeTransform(tagsize, det->p, fx, fy, px, py);
+				myT = getRelativeTransform(tag1size, det->p, fx, fy, px, py);
 				//std::cout <<"Full TF:" <<std::endl<<myT <<std::endl;
 				std::cout << "X: " <<myT(0, 3)<<std::endl;
 				std::cout << "Y: " <<myT(1, 3)<<std::endl;
 				std::cout << "Z: " <<myT(2, 3)<<std::endl;
 				std::cout <<"dt: " <<dt<<std::endl;
+				originx = myT(0, 3);
+				originy = myT(1, 3);
+				originz = myT(2, 3);
+			}
+			if (det->id ==tag2id)
+			{
+				std::cout << "found tag "<<det->id<<" with error: " << det->hamming <<std::endl;
+				std::cout << "reading tag img coords as x: "<< det->c[0] <<" y: "<<det->c[1] <<std::endl;
+				//"tag size is size between the outer black edges" -Ed
+				//"I'll bet its in meters..." -Austin
+				myT = getRelativeTransform(tag2size, det->p, fx, fy, px, py);
+				//std::cout <<"Full TF:" <<std::endl<<myT <<std::endl;
+				std::cout << "X: " <<myT(0, 3)<<std::endl;
+				std::cout << "Y: " <<myT(1, 3)<<std::endl;
+				std::cout << "Z: " <<myT(2, 3)<<std::endl;
+				std::cout <<"dt: " <<dt<<std::endl;
+				myx = myT(0, 3) - originx;
+				myy = myT(1, 3) - originy;
+				myz = myT(2, 3) - originz;
+
 				record = true;
-				
 			}
 		}
 
@@ -137,7 +170,7 @@ int main(int argc, char** argv)
 			theame = ss.str();
 			imwrite(theame, img3);
 			//write to csv file here
-			outfile << theame <<", "<<dt<<", "<<myT(0, 3)<<", "<<myT(1, 3)<<", "<<myT(2, 3)<<std::endl;
+			outfile << theame <<", "<<dt<<", "<<myx<<", "<<myy<<", "<<myz<<std::endl;
 			record = false;
 		}
 
