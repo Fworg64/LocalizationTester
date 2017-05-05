@@ -90,7 +90,11 @@ int main(int argc, char** argv)
 				//"tag size is size between the outer black edges" -Ed
 				//"I'll bet its in meters..." -Austin
 				myT = getRelativeTransform(.086, det->p, fx, fy, px, py);
-				std::cout <<myT <<std::endl;
+				//std::cout <<"Full TF:" <<std::endl<<myT <<std::endl;
+				std::cout << "X: " <<myT(0, 3)<<std::endl;
+				std::cout << "Y: " <<myT(1, 3)<<std::endl;
+				std::cout << "Z: " <<myT(2, 3)<<std::endl;
+				
 			}
 		}
 
