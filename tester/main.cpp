@@ -1,6 +1,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <stdio.h>
+#include <stdlib.h>
 #include <Eigen/Dense>
 #include <fstream>
 
@@ -15,6 +16,19 @@ Eigen::Matrix4d getRelativeTransform(double tag_size,double tag_p[][2], double f
 
 int main(int argc, char** argv)
 {
+	double tagsize;
+	int delay;
+	if (argc != 3)
+	{
+		std::cout <<"Help:: please supply the tag size measured from edge of black border to edge of black border and arguement for waitkey in ms like this: "<<std::endl<<"main .18 30"<<std::endl;
+		return -1;
+	}
+	else
+	{
+		tagsize = atof(argv[1]);
+		delay = atoi(argv[2]);
+	}
+
     VideoCapture cap(0);
     if(!cap.isOpened()) return -1; //check for success
     //char* imageName = argv[1];
@@ -104,7 +118,7 @@ int main(int argc, char** argv)
 				std::cout << "reading tag pos as x: "<< det->c[0] <<" y: "<<det->c[1] <<std::endl;
 				//"tag size is size between the outer black edges" -Ed
 				//"I'll bet its in meters..." -Austin
-				myT = getRelativeTransform(.086, det->p, fx, fy, px, py);
+				myT = getRelativeTransform(tagsize, det->p, fx, fy, px, py);
 				//std::cout <<"Full TF:" <<std::endl<<myT <<std::endl;
 				std::cout << "X: " <<myT(0, 3)<<std::endl;
 				std::cout << "Y: " <<myT(1, 3)<<std::endl;
@@ -129,7 +143,7 @@ int main(int argc, char** argv)
 
         apriltag_detections_destroy(detections); //not sure if neccesary
         //if(waitKey(3000) >= 0) break;
-        if ((char)waitKey(30) ==97) break; //neccesary, break on "a" press
+        if ((char)waitKey(delay) ==97) break; //neccesary, break on "a" press
     }
 	
 	outfile.close();    
