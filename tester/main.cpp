@@ -1,6 +1,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <stdio.h>
+#include <Eigen/Dense>
 
 extern "C" {
 #include "apriltag.h"
@@ -8,6 +9,8 @@ extern "C" {
 }
 
 using namespace cv;
+
+Eigen::Matrix4d getRelativeTransform(double tag_size,double tag_p[][2], double fx, double fy, double px, double py);
 
 int main(int argc, char** argv)
 {
@@ -58,6 +61,7 @@ int main(int argc, char** argv)
 	double py = cameraMatrix1.at<double>(5);
 	std::cout << "Read camerea properties fx, fy, px, py " <<fx<<", "<<fy<<", "<<px<<", "<<py<<std::endl;
 
+	Eigen::Matrix4d myT;
 
     while(1)
     {
@@ -83,6 +87,10 @@ int main(int argc, char** argv)
 			{
 				std::cout << "found tag "<<det->id<<" with error: " << det->hamming <<std::endl;
 				std::cout << "reading tag pos as x: "<< det->c[0] <<" y: "<<det->c[1] <<std::endl;
+				//"tag size is size between the outer black edges" -Ed
+				//"I'll bet its in meters..." -Austin
+				myT = getRelativeTransform(.086, det->p, fx, fy, px, py);
+				std::cout <<myT <<std::endl;
 			}
 		}
 
@@ -95,4 +103,49 @@ int main(int argc, char** argv)
     apriltag_detector_destroy(td);
     tag36h11_destroy(tf);
     return 0;
+}
+
+Eigen::Matrix4d getRelativeTransform(double tag_size,double tag_p[][2], double fx, double fy, double px, double py)
+{
+   std::vector<cv::Point3f> objPts;
+   std::vector<cv::Point2f> imgPts;
+   double s = tag_size/2.;
+   objPts.push_back(cv::Point3f(-s,-s, 0));
+   objPts.push_back(cv::Point3f( s,-s, 0));
+   objPts.push_back(cv::Point3f( s, s, 0));
+   objPts.push_back(cv::Point3f(-s, s, 0));
+ /*
+   std::pair<float, float> p1 = p[0];
+   std::pair<float, float> p2 = p[1];
+   std::pair<float, float> p3 = p[2];
+   std::pair<float, float> p4 = p[3];
+
+   imgPts.push_back(cv::Point2f(p1.first, p1.second));
+   imgPts.push_back(cv::Point2f(p2.first, p2.second));
+   imgPts.push_back(cv::Point2f(p3.first, p3.second));
+   imgPts.push_back(cv::Point2f(p4.first, p4.second));
+*/
+   imgPts.push_back(cv::Point2f(tag_p[0][0], tag_p[0][1]));
+   imgPts.push_back(cv::Point2f(tag_p[1][0], tag_p[1][1]));
+   imgPts.push_back(cv::Point2f(tag_p[2][0], tag_p[2][1]));
+   imgPts.push_back(cv::Point2f(tag_p[3][0], tag_p[3][1]));
+ 
+   cv::Mat rvec, tvec;
+   cv::Matx33f cameraMatrix(
+                            fx, 0, px,
+                            0, fy, py,
+                            0,  0,  1);
+   cv::Vec4f distParam(0,0,0,0); // all 0?
+   cv::solvePnP(objPts, imgPts, cameraMatrix, distParam, rvec, tvec);
+   cv::Matx33d r;
+   cv::Rodrigues(rvec, r);
+   Eigen::Matrix3d wRo;
+   wRo << r(0,0), r(0,1), r(0,2), r(1,0), r(1,1), r(1,2), r(2,0), r(2,1), r(2,2);
+ 
+   Eigen::Matrix4d T; 
+   T.topLeftCorner(3,3) = wRo;
+   T.col(3).head(3) << tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2);
+   T.row(3) << 0,0,0,1;
+ 
+   return T;
 }
