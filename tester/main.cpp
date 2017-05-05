@@ -62,9 +62,15 @@ int main(int argc, char** argv)
 	std::cout << "Read camerea properties fx, fy, px, py " <<fx<<", "<<fy<<", "<<px<<", "<<py<<std::endl;
 
 	Eigen::Matrix4d myT;
+	double t1=0;
+	double t2=0;
+	double dt=0;
 
     while(1)
     {
+	t1 = t2;
+	t2 = (double)getTickCount();
+	dt = (t2-t1)/getTickFrequency();
 	cap >> img; //c++ is the future
 	cvtColor(img, img2, COLOR_BGR2GRAY);
 	img3 = img;
@@ -83,7 +89,7 @@ int main(int argc, char** argv)
         	apriltag_detection_t *det;
         	zarray_get(detections, i, &det); //store dection at adress pointed by det
 
-			if (det->id == 0); //populate position of player from tag id
+			//if (det->id == 0) //populate position of player from tag id
 			{
 				std::cout << "found tag "<<det->id<<" with error: " << det->hamming <<std::endl;
 				std::cout << "reading tag pos as x: "<< det->c[0] <<" y: "<<det->c[1] <<std::endl;
@@ -94,6 +100,7 @@ int main(int argc, char** argv)
 				std::cout << "X: " <<myT(0, 3)<<std::endl;
 				std::cout << "Y: " <<myT(1, 3)<<std::endl;
 				std::cout << "Z: " <<myT(2, 3)<<std::endl;
+				std::cout <<"dt: " <<dt<<std::endl;
 				
 			}
 		}
