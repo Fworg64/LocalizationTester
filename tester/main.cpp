@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include <stdio.h>
 #include <Eigen/Dense>
+#include <fstream>
 
 extern "C" {
 #include "apriltag.h"
@@ -37,7 +38,7 @@ int main(int argc, char** argv)
 
     zarray_t *detections;
 
-    std::cout << "Warming up camera(2sec)"<< std::endl;
+    std::cout << "Warming up camera(2sec), press \"a\" to stop"<< std::endl;
 
     waitKey(2000); //let camera warm up
 
@@ -65,6 +66,14 @@ int main(int argc, char** argv)
 	double t1=0;
 	double t2=0;
 	double dt=0;
+	unsigned int counter=0;
+
+	std::ofstream outfile;
+	outfile.open("outfile.csv");
+
+	bool record=false;
+	std::stringstream ss;
+	string theame;
 
     while(1)
     {
@@ -101,15 +110,29 @@ int main(int argc, char** argv)
 				std::cout << "Y: " <<myT(1, 3)<<std::endl;
 				std::cout << "Z: " <<myT(2, 3)<<std::endl;
 				std::cout <<"dt: " <<dt<<std::endl;
+				record = true;
 				
 			}
 		}
 
+		//record //Rober Reich, "inequality for all"
+		if (record)
+		{
+			ss.str(std::string());
+			ss <<"zimg"<<counter++<<".jpg";
+			theame = ss.str();
+			imwrite(theame, img3);
+			//write to csv file here
+			outfile << theame <<", "<<dt<<", "<<myT(0, 3)<<", "<<myT(1, 3)<<", "<<myT(2, 3)<<std::endl;
+			record = false;
+		}
+
         apriltag_detections_destroy(detections); //not sure if neccesary
         //if(waitKey(3000) >= 0) break;
-        waitKey(30); //neccesary
+        if ((char)waitKey(30) ==97) break; //neccesary, break on "a" press
     }
-    
+	
+	outfile.close();    
     //prevent memory leaks!
     apriltag_detector_destroy(td);
     tag36h11_destroy(tf);
